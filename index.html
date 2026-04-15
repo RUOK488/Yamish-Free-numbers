@@ -3,407 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FakeChat Mirror | Simulate Incoming Messages</title>
-    <!-- Google Fonts & Font Awesome -->
+    <title>Free Temporary Numbers | Secure Verification</title>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+        /* --- CSS STYLES --- */
+        :root {
+            --primary: #0052cc; 
+            --primary-dark: #0747a6;
+            --accent: #36b37e; 
+            --dark: #172b4d;
+            --text: #42526e;
+            --bg: #f4f5f7;
+            --white: #ffffff;
+            --radius: 12px;
+            --font: 'Plus Jakarta Sans', sans-serif;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            background: #0b141a;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font);
+            background-color: var(--bg);
+            color: var(--dark);
             height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
+            overflow: hidden; 
         }
 
-        /* Main chat container - realistic WhatsApp style */
-        .chat-app {
-            max-width: 500px;
-            width: 100%;
-            height: 95vh;
-            background: #111b21;
-            border-radius: 28px;
-            display: flex;
+        /* --- LOADER WITH SAFETY TIMER --- */
+        /* If JS fails, this animation forces the loader to hide after 3.5 seconds */
+        #initial-loader {
+            position: fixed; inset: 0; background: var(--white);
+            z-index: 9999; display: flex; justify-content: center; align-items: center;
             flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            position: relative;
+            animation: forceHide 0.5s ease-out 3.5s forwards; 
+        }
+        @keyframes forceHide { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+        .eye-container { text-align: center; }
+        .eye {
+            width: 60px; height: 60px; background: #fff; border: 3px solid var(--dark);
+            border-radius: 50%; position: relative; margin: 0 auto 15px;
+        }
+        .pupil {
+            width: 20px; height: 20px; background: var(--dark); border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            animation: search 2s infinite;
+        }
+        @keyframes search {
+            0%, 100% { transform: translate(-50%, -50%); }
+            25% { transform: translate(-20%, -50%); }
+            50% { transform: translate(-50%, -20%); }
+            75% { transform: translate(-80%, -50%); }
         }
 
-        /* Header */
-        .chat-header {
-            background: #202c33;
-            padding: 14px 18px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid #2a3942;
+        /* --- APP CONTAINER --- */
+        /* If JS fails, this animation forces the app to show */
+        #app-container { 
+            height: 100%; display: flex; flex-direction: column; 
+            opacity: 0; 
+            animation: forceShow 0.5s ease-out 3.5s forwards;
         }
-        .back-icon {
-            background: none;
-            border: none;
-            color: #aebac1;
-            font-size: 1.3rem;
-            cursor: pointer;
+        @keyframes forceShow { to { opacity: 1; } }
+
+        .navbar {
+            height: 60px; padding: 0 20px; background: var(--white); display: flex;
+            justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03); flex-shrink: 0;
         }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            background: #2a3942;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #e9edef;
-            font-weight: 600;
+        .brand { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px; }
+        .highlight { color: var(--primary); }
+        .status-tag { background: #e3fcef; color: var(--accent); font-size: 0.75rem; font-weight: 700; padding: 5px 10px; border-radius: 20px; display: flex; gap: 6px; align-items: center;}
+        .icon-btn { border: none; background: none; font-size: 1.2rem; padding: 8px; color: var(--dark); cursor: pointer; }
+
+        /* --- VIEWS --- */
+        .view { 
+            flex: 1; display: none; padding: 20px; 
+            align-items: center; justify-content: center; flex-direction: column;
+            overflow-y: auto; 
         }
-        .contact-info {
-            flex: 1;
-        }
-        .contact-name {
-            font-weight: 600;
-            color: #e9edef;
-            font-size: 1rem;
-        }
-        .contact-status {
-            font-size: 0.7rem;
-            color: #8696a1;
-        }
-        .menu-icons {
-            display: flex;
-            gap: 18px;
-            color: #aebac1;
-        }
-        .menu-icons i {
-            font-size: 1.2rem;
+        .active-view { display: flex; animation: fadeUp 0.4s ease-out; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Messages area */
-        .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background-image: radial-gradient(circle at 10% 20%, rgba(32, 44, 51, 0.3) 1px, transparent 1px);
-            background-size: 24px 24px;
+        /* --- COMPONENTS --- */
+        .hero-content { text-align: center; max-width: 500px; }
+        .secure-badge { 
+            display: inline-block; background: #dfe1e6; color: var(--text); 
+            padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 20px; 
         }
+        .hero-content h1 { font-size: 2.2rem; line-height: 1.1; margin-bottom: 15px; color: var(--dark); }
+        .highlight-text { color: var(--primary); }
+        .hero-content p { color: var(--text); margin-bottom: 30px; line-height: 1.5; }
+        
+        .cta-button {
+            background: var(--primary); color: white; padding: 16px 32px; 
+            border-radius: 50px; border: none; font-weight: 700; font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 82, 204, 0.3); cursor: pointer;
+            transition: transform 0.1s; display: inline-flex; align-items: center; gap: 10px;
+            width: 100%; justify-content: center;
+        }
+        .cta-button:active { transform: scale(0.98); }
 
-        /* Bubbles */
-        .message {
-            display: flex;
-            margin: 4px 0;
+        .card {
+            background: var(--white); padding: 30px; border-radius: 20px; width: 100%; max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
         }
-        .message.outgoing {
-            justify-content: flex-end;
-        }
-        .message.incoming {
-            justify-content: flex-start;
-        }
-        .bubble {
-            max-width: 80%;
-            padding: 8px 12px;
-            border-radius: 18px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            word-wrap: break-word;
-            position: relative;
-            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.1);
-        }
-        .outgoing .bubble {
-            background: #005c4b;
-            color: #e9edef;
-            border-bottom-right-radius: 4px;
-        }
-        .incoming .bubble {
-            background: #202c33;
-            color: #e9edef;
-            border-bottom-left-radius: 4px;
-        }
-        .message-time {
-            font-size: 0.65rem;
-            color: #8696a1;
-            margin-top: 2px;
-            margin-right: 8px;
-        }
-        .outgoing .message-time {
-            text-align: right;
-        }
+        .card-header { text-align: center; margin-bottom: 25px; }
+        .step-badge { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #b3bac5; letter-spacing: 1px; margin-bottom: 5px; }
         
-        /* Simulated badge */
-        .simulation-badge {
-            background: #0a6b58;
-            font-size: 0.6rem;
-            padding: 2px 8px;
-            border-radius: 30px;
-            margin-left: 8px;
-            font-weight: 400;
+        .whatsapp-full-btn {
+            width: 100%; background: #25D366; color: white; border: none;
+            padding: 15px; border-radius: 12px; font-weight: 700; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
         }
+        .divider { text-align: center; margin: 20px 0; position: relative; }
+        .divider span { background: var(--white); padding: 0 10px; color: #b3bac5; font-size: 0.75rem; font-weight: 700; position: relative; z-index: 1; }
+        .divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #ebecf0; }
 
-        /* Composer */
-        .composer {
-            background: #202c33;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-top: 1px solid #2a3942;
+        .input-row { display: flex; gap: 10px; margin-top: 5px; }
+        input { flex: 1; padding: 12px; border: 2px solid #dfe1e6; border-radius: 10px; outline: none; font-family: inherit; transition: 0.2s; font-size: 16px; }
+        input:focus { border-color: var(--primary); }
+        #btn-verify-code { background: var(--dark); color: white; border: none; border-radius: 10px; width: 50px; cursor: pointer; }
+        #btn-verify-code:disabled { background: #ebecf0; color: #b3bac5; }
+
+        .select-box { position: relative; margin-top: 5px; }
+        select { width: 100%; appearance: none; padding: 14px; border: 2px solid #dfe1e6; border-radius: 12px; background: transparent; font-family: inherit; color: var(--dark); }
+        .select-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #b3bac5; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-left: 5px; }
+        .full-width { width: 100%; }
+
+        /* --- SUCCESS PAGE --- */
+        .success-card { text-align: center; border-top: 5px solid var(--accent); }
+        .success-icon { font-size: 3rem; color: var(--accent); margin-bottom: 15px; }
+        .number-box {
+            background: #f4f5f7; border: 2px dashed #dfe1e6; padding: 15px;
+            border-radius: 12px; display: flex; align-items: center; justify-content: space-between;
+            margin: 20px 0;
         }
-        .composer input {
-            flex: 1;
-            background: #2a3942;
-            border: none;
-            padding: 10px 14px;
-            border-radius: 28px;
-            color: #e9edef;
-            font-family: inherit;
-            font-size: 0.9rem;
-            outline: none;
-        }
-        .composer input::placeholder {
-            color: #8696a1;
-        }
-        .send-btn {
-            background: #005c4b;
-            border: none;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: 0.1s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .send-btn:active {
-            transform: scale(0.94);
-            background: #0a6b58;
-        }
-        .attach-icon {
-            color: #aebac1;
-            font-size: 1.3rem;
-        }
-        
-        /* Test number configuration panel */
-        .config-panel {
-            background: #1e2a32;
-            margin: 8px 12px;
-            border-radius: 16px;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 8px;
-            border: 1px solid #2a3942;
-        }
-        .config-label {
-            font-size: 0.7rem;
-            color: #aebac1;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .test-number-input {
-            background: #2a3942;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 20px;
-            color: #e9edef;
-            font-size: 0.75rem;
-            width: 140px;
-            font-family: monospace;
-            outline: none;
-        }
-        .update-number-btn {
-            background: #005c4b;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 20px;
-            color: white;
-            font-size: 0.7rem;
-            cursor: pointer;
-        }
-        .note-text {
-            font-size: 0.65rem;
-            color: #8696a1;
-            margin-top: 4px;
-            text-align: center;
-        }
-        
-        /* Master message card */
-        .inline-edit-note {
-            background: #1e2a32;
-            margin: 0 12px 8px 12px;
-            border-radius: 14px;
-            padding: 8px 12px;
-            font-size: 0.7rem;
-            color: #aebac1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .edit-master-btn {
-            background: #005c4b;
-            border: none;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .master-preview {
-            background: #0f1a1f;
-            margin: 0 12px 8px 12px;
-            border-radius: 14px;
-            padding: 8px 12px;
-            border-left: 3px solid #00a884;
-        }
-        .master-preview div:first-child {
-            font-size: 0.7rem;
-            color: #8696a1;
-            margin-bottom: 4px;
-        }
-        #masterMessagePreview {
-            font-size: 0.75rem;
-            color: #d1d9e0;
-            word-break: break-word;
-            max-height: 70px;
-            overflow-y: auto;
-            line-height: 1.3;
-        }
-        
-        .reset-chat {
-            background: #2a3942;
-            border: none;
-            color: #e9edef;
-            padding: 5px 12px;
-            border-radius: 30px;
-            font-size: 0.7rem;
-            margin: 4px 12px 8px auto;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            width: fit-content;
-        }
-        .toast-msg {
-            position: absolute;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(4px);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 0.75rem;
-            pointer-events: none;
-            z-index: 20;
-            white-space: nowrap;
-            max-width: 90%;
-            white-space: normal;
-            text-align: center;
-        }
-        .messages-container::-webkit-scrollbar {
-            width: 5px;
-        }
-        .messages-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .messages-container::-webkit-scrollbar-thumb {
-            background: #3b4a54;
-            border-radius: 10px;
+        .flag-icon { font-size: 1.5rem; }
+        .number-text { font-family: monospace; font-size: 1.2rem; font-weight: 700; letter-spacing: 1px; color: var(--dark); }
+        .copy-icon-btn { background: white; border: 1px solid #dfe1e6; width: 35px; height: 35px; border-radius: 8px; color: var(--primary); display: flex; align-items: center; justify-content: center; }
+        .instruction-box { background: #deebff; color: #0747a6; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; text-align: left; }
+
+        /* --- TOAST --- */
+        #toast-box { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 300px; pointer-events: none; }
+        .toast { background: rgba(23, 43, 77, 0.95); color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.9rem; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* --- SIDEBAR --- */
+        .sidebar { position: fixed; top: 0; left: -100%; width: 80%; max-width: 300px; height: 100%; background: white; z-index: 100; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 2px 0 20px rgba(0,0,0,0.1); }
+        .sidebar.active { left: 0; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; visibility: hidden; transition: 0.3s; }
+        .overlay.active { opacity: 1; visibility: visible; }
+        .sidebar-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ebecf0; }
+        .sidebar ul { list-style: none; padding: 10px; }
+        .sidebar li { padding: 15px; border-radius: 8px; color: var(--dark); font-weight: 600; display: flex; gap: 15px; margin-bottom: 5px; }
+        .sidebar li:active { background: #ebecf0; }
+
+        @media (min-width: 768px) {
+            .card { padding: 40px; }
         }
     </style>
 </head>
 <body>
-<div class="chat-app" id="chatApp">
-    <!-- Header -->
-    <div class="chat-header">
-        <button class="back-icon" id="backBtn"><i class="fa-solid fa-arrow-left"></i></button>
-        <div class="avatar">
-            <i class="fa-solid fa-mobile-alt"></i>
-        </div>
-        <div class="contact-info">
-            <div class="contact-name" id="contactNameDisplay">📱 My Testing Number</div>
-            <div class="contact-status" id="contactStatusDisplay">Tap any bubble to edit • Simulated</div>
-        </div>
-        <div class="menu-icons">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
+
+    <!-- LOADER -->
+    <div id="initial-loader">
+        <div class="eye-container">
+            <div class="eye">
+                <div class="pupil"></div>
+            </div>
+            <p class="loading-text">Establishing Secure Link...</p>
         </div>
     </div>
 
-    <!-- Messages container -->
-    <div class="messages-container" id="messagesContainer"></div>
+    <!-- MAIN APP -->
+    <div id="app-container">
+        
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-left">
+                <button id="menu-btn" class="icon-btn"><i class="fa-solid fa-bars"></i></button>
+                <span class="brand">Free<span class="highlight">Sim</span></span>
+            </div>
+            <div class="nav-right">
+                <span class="status-tag"><i class="fa-solid fa-wifi"></i> Online</span>
+            </div>
+        </nav>
 
-    <!-- Config: Testing Number (Simulates the "sender") -->
-    <div class="config-panel">
-        <div class="config-label">
-            <i class="fa-regular fa-id-card"></i> 
-            <span>Simulate as number:</span>
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>Menu</h3>
+                <button id="close-menu"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <ul>
+                <li onclick="location.reload()"><i class="fa-solid fa-house"></i> Home</li>
+                <li id="nav-about"><i class="fa-solid fa-circle-info"></i> How it works</li>
+            </ul>
         </div>
-        <input type="text" id="testingNumberInput" class="test-number-input" placeholder="+1234567890" value="+919893135740">
-        <button id="updateNumberBtn" class="update-number-btn"><i class="fa-regular fa-pen-to-square"></i> Set</button>
-    </div>
-    <div class="note-text">
-        <i class="fa-regular fa-message"></i> When you send, it will appear as if THIS number sent you the message/script
-    </div>
+        <div id="overlay" class="overlay"></div>
 
-    <!-- Editable master message (script) -->
-    <div class="inline-edit-note">
-        <span><i class="fa-regular fa-file-lines"></i> 📜 Editable Script / Message (sent from testing number):</span>
-        <button class="edit-master-btn" id="editMasterMsgBtn"><i class="fa-regular fa-edit"></i> Edit</button>
-    </div>
-    <div class="master-preview">
-        <div><i class="fa-brands fa-whatsapp"></i> Pre-filled content (what "testing number" will send)</div>
-        <div id="masterMessagePreview">Loading...</div>
-    </div>
+        <!-- 1. LANDING VIEW -->
+        <section id="view-landing" class="view active-view">
+            <div class="hero-content">
+                <div class="secure-badge">
+                    <i class="fa-solid fa-shield-check"></i> Verified Free Service
+                </div>
+                <h1>Temporary SMS Numbers <br><span class="highlight-text">For Everyone.</span></h1>
+                <p>Receive SMS verification codes instantly without exposing your real number. 100% Free charitable initiative.</p>
+                
+                <div class="hero-actions">
+                    <button id="btn-get-started" class="cta-button">
+                        Get Your Number <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
 
-    <!-- Compose area (message you type as "reply" but also can simulate sending script from testing number) -->
-    <div class="composer">
-        <i class="fa-regular fa-face-smile attach-icon"></i>
-        <input type="text" id="messageInput" placeholder="Type a message to send as yourself..." autocomplete="off">
-        <button class="send-btn" id="sendMessageBtn">
-            <i class="fa-regular fa-paper-plane"></i>
-        </button>
+        <!-- 2. VERIFICATION VIEW -->
+        <section id="view-verification" class="view">
+            <div class="card">
+                <div class="card-header">
+                    <div class="step-badge">Step 1 of 2</div>
+                    <h2>Verify Humanity</h2>
+                    <p>To keep this service free, please request an access code.</p>
+                </div>
+
+                <button id="btn-whatsapp-request" class="whatsapp-full-btn">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <span>Get Access Code</span>
+                </button>
+                
+                <div class="divider"><span>THEN</span></div>
+
+                <div class="input-area">
+                    <label>Enter Access Code</label>
+                    <div class="input-row">
+                        <input type="text" id="input-access-code" placeholder="ex: FREE2025" disabled>
+                        <button id="btn-verify-code" disabled>
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                    </div>
+                    <p class="tiny-hint" style="font-size: 0.7rem; color: #888; margin-top: 8px;">Input unlocks after clicking WhatsApp button.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view">
+            <div class="card">
+                <div class="card-header">
+                    <div class="step-badge">Step 2 of 2</div>
+                    <h2>Configuration</h2>
+                </div>
+
+                <div class="form-stack">
+                    <div class="form-group">
+                        <label>Select Country</label>
+                        <div class="select-box">
+                            <select id="country-select">
+                                <option value="" selected disabled>Choose Location...</option>
+                            </select>
+                            <div class="select-icon"><i class="fa-solid fa-chevron-down"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Service</label>
+                        <div class="select-box">
+                            <select id="service-select">
+                                <option value="" selected disabled>Choose Service...</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                                <option value="Telegram">Telegram</option>
+                                <option value="Facebook">Facebook</option>
+                                <option value="Google">Google / Gmail</option>
+                                <option value="TikTok">TikTok</option>
+                                <option value="Twitter">Twitter / X</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div class="select-icon"><i class="fa-solid fa-chevron-down"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-assign-number" class="cta-button full-width">
+                    Get Number Now
+                </button>
+            </div>
+        </section>
+
+        <!-- 4. SUCCESS VIEW -->
+        <section id="view-success" class="view">
+            <div class="card success-card">
+                <div class="success-icon">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h2>Number Active</h2>
+                <p class="success-sub">This number is reserved for you.</p>
+
+                <div class="number-box">
+                    <div class="flag-icon" id="display-flag">🇺🇸</div>
+                    <div class="number-text" id="display-number">Loading...</div>
+                    <button id="btn-copy" class="copy-icon-btn"><i class="fa-regular fa-copy"></i></button>
+                </div>
+
+                <div class="instruction-box">
+                    <p><strong>Action Required:</strong> Click below to request your specific SMS code via our automated bot.</p>
+                </div>
+
+                <button id="btn-request-sms" class="whatsapp-full-btn">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    Request SMS Code
+                </button>
+            </div>
+        </section>
+
     </div>
     
-    <!-- Double action: also a button to "Simulate incoming from testing number" -->
-    <div style="display: flex; gap: 8px; margin: 0 12px 8px 12px;">
-        <button id="simulateIncomingBtn" style="flex:1; background:#2a3942; border:none; padding:8px; border-radius:30px; color:#e9edef; font-size:0.7rem; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="fa-regular fa-envelope"></i> Simulate: Testing number sends script</button>
-        <button id="resetChatBtn" style="background:#2a3942; border:none; padding:8px; border-radius:30px; color:#e9edef; font-size:0.7rem; width:45px;"><i class="fa-regular fa-trash-can"></i></button>
-    </div>
-    <div class="fake-status" style="border-top: none; padding-top: 4px;">
-        <i class="fa-regular fa-clock"></i> Client-side simulation — messages appear from selected testing number
-    </div>
-</div>
+    <!-- Toast Notification -->
+    <div id="toast-box"></div>
 
-<script>
-    // --------------------------------------------------------------
-    // FAKECHAT MIRROR: Any message sent via "Simulate" looks like coming from the testing number.
-    // The user can edit the script/master message, and when they click simulate,
-    // it adds an incoming message with that script, as if the testing number sent it.
-    // Also supports normal outgoing messages (user side).
-    // --------------------------------------------------------------
-    
-    // DEFAULT MASTER SCRIPT (the original long text)
-    const DEFAULT_MASTER_TEXT = `https://wa.me/+923243992036?text=https://wa.me/2349022512615?text=Unete a MI Grupo se vale todo!! Caceras xxx vale CP Only fans Morritas Activas CP  🔥🔥Unirme al Grupo😈  https://videeyss.online/morritas-cp💥💥🔥🔥 MANOOO VC N VAI ACREDITAR 🔥🔥💥💥
+    <!-- MAIN SCRIPT (LOGIC) -->
+    <script>
+        // --- CONFIGURATION ---
+        const BOT_NUMBER = "923243992036";
+
+        // --- FULL INVENTORY (From Initial Requirements) ---
+        // Added back all 13 countries you originally wanted
+        const NUMBERS = {
+            "USA": { flag: "🇺🇸", pool: ["+13324655723", "+18578329806", "+13324651078", "+16142073008", "+18756983490", "+12075037862", "+18333022124", "+18333180584", "+18152611047"] },
+            "United Kingdom": { flag: "🇬🇧", pool: ["+447949338056", "+447481916733", "+447367211583", "+447475352330", "+447367524129", "+447598328098", "+447949338055", "+447598328057", "+447475355392", "+447598328056"] },
+            "Netherlands": { flag: "🇳🇱", pool: ["+31620268917", "+31620706483", "+31612776705", "+31620185296", "+31620171677", "+31653682942"] },
+            "Germany": { flag: "🇩🇪", pool: ["+4915777103276"] },
+            "Spain": { flag: "🇪🇸", pool: ["+34646814896", "+34620239057", "+34676784008", "+34628152325", "+34696845618"] },
+            "Israel": { flag: "🇮🇱", pool: ["+972503816969", "+972552603210"] },
+            "India": { flag: "🇮🇳", pool: ["+917428730894", "+917428723247"] },
+            "Croatia": { flag: "🇭🇷", pool: ["+385915802296", "+385917962212", "+385917370284", "+385919831698", "+385919823099", "+385915982071"] },
+            "Mexico": { flag: "🇲🇽", pool: ["+522142296758"] },
+            "Brazil": { flag: "🇧🇷", pool: ["+559551583801"] },
+            "Nigeria": { flag: "🇳🇬", pool: ["+2348153353131", "+2349094264199", "+2347044838902", "+2347061000491", "+2348152611047"] },
+            "Uganda": { flag: "🇺🇬", pool: ["+256740497363", "+256747808916", "+256742807524", "+256758276630"] },
+            "South Africa": { flag: "🇿🇦", pool: ["+27635505591"] }
+        };
+
+        // --- STATE ---
+        let userData = { assignedNumber: null, assignedCountry: null, service: null };
+
+        // --- INIT LOGIC (Prevents Stalling) ---
+        function initApp() {
+            const loader = document.getElementById('initial-loader');
+            const app = document.getElementById('app-container');
+            
+            // Clear CSS animations
+            loader.style.animation = 'none';
+            app.style.animation = 'none';
+
+            // Hard hide/show
+            loader.style.opacity = '0';
+            setTimeout(() => { loader.style.visibility = 'hidden'; }, 500);
+            app.style.opacity = '1';
+
+            // Restore State
+            try {
+                const saved = localStorage.getItem('tempNum_data');
+                if (saved) userData = JSON.parse(saved);
+            } catch (e) {}
+
+            if (userData.assignedNumber) {
+                showView('view-success');
+                renderSuccess();
+            }
+            populateCountries();
+        }
+
+        // Force Load triggers
+        window.addEventListener('load', initApp);
+        setTimeout(initApp, 3000); // Backup Trigger
+
+        // --- VIEW MANAGER ---
+        function showView(id) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active-view'));
+            document.getElementById(id).classList.add('active-view');
+        }
+
+        // --- INTERACTION HANDLERS ---
+        
+        // Landing
+        document.getElementById('btn-get-started').onclick = function() {
+            showView('view-verification');
+        };
+
+        // Verification Step
+        document.getElementById('btn-whatsapp-request').onclick = function() {
+            // Combine the Text Config + the User Request
+            const safeConfig = window.TEXT_CONFIG || "";
+            const msg = safeConfig + "\n\nHello! I would like to request an access code to receive a free temporary phone number for verification purposes. Thank you!";
+            
+            window.open(`https://wa.me/${BOT_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+            
+            setTimeout(() => {
+                const input = document.getElementById('input-access-code');
+                input.disabled = false;
+                input.placeholder = "Enter code here...";
+                showToast("Please enter the code sent");
+            }, 1500);
+        };
+
+        // Unlock Verification Button
+        document.getElementById('input-access-code').addEventListener('input', function(e) {
+            const btn = document.getElementById('btn-verify-code');
+            if(e.target.value.length > 2) {
+                btn.disabled = false;
+                btn.style.background = "#0052cc";
+            }
+        });
+
+        // Verify Click
+        document.getElementById('btn-verify-code').onclick = function() {
+            showToast("Verification Successful!");
+            setTimeout(() => showView('view-dashboard'), 500);
+        };
+
+        // Dashboard Population
+        function populateCountries() {
+            const sel = document.getElementById('country-select');
+            sel.innerHTML = '<option value="" selected disabled>Choose Location...</option>'; 
+            
+            // Loop through all 13 countries in inventory
+            for (let country in NUMBERS) {
+                const opt = document.createElement('option');
+                opt.value = country;
+                opt.textContent = `${NUMBERS[country].flag} ${country} (${NUMBERS[country].pool.length})`;
+                sel.appendChild(opt);
+            }
+        }
+
+        // Assign Number
+        document.getElementById('btn-assign-number').onclick = function() {
+            const country = document.getElementById('country-select').value;
+            const service = document.getElementById('service-select').value;
+
+            if (!country || !service) {
+                showToast("Please select Country & Service");
+                return;
+            }
+
+            if (userData.assignedNumber) {
+                showToast("You already have a number!");
+                showView('view-success');
+                return;
+            }
+
+            const pool = NUMBERS[country].pool;
+            const randomNum = pool[Math.floor(Math.random() * pool.length)];
+
+            userData = { assignedNumber: randomNum, assignedCountry: country, service: service };
+            
+            // Save to LocalStorage
+            try { localStorage.setItem('tempNum_data', JSON.stringify(userData)); } catch(e){}
+
+            renderSuccess();
+            showView('view-success');
+        };
+
+        // Success Page
+        function renderSuccess() {
+            document.getElementById('display-number').textContent = userData.assignedNumber;
+            document.getElementById('display-flag').textContent = NUMBERS[userData.assignedCountry] ? NUMBERS[userData.assignedCountry].flag : "🌐";
+
+            // Setup Request SMS Button
+            document.getElementById('btn-request-sms').onclick = function() {
+                const safeConfig = window.TEXT_CONFIG || "";
+                const userRequest = `\n\nHello! I have gotten the number I need SMS Code for ${userData.service} on number ${userData.assignedNumber} (${userData.assignedCountry}).`;
+                
+                const fullMsg = safeConfig + userRequest;
+                window.open(`https://wa.me/${BOT_NUMBER}?text=${encodeURIComponent(fullMsg)}`, '_blank');
+            };
+
+            // Setup Copy Button
+            document.getElementById('btn-copy').onclick = function() {
+                navigator.clipboard.writeText(userData.assignedNumber);
+                showToast("Copied to clipboard");
+            };
+        }
+
+        // Menu Handlers
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        
+        document.getElementById('menu-btn').onclick = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
+        const closeMenu = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
+        document.getElementById('close-menu').onclick = closeMenu;
+        overlay.onclick = closeMenu;
+
+        function showToast(msg) {
+            const box = document.getElementById('toast-box');
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = msg;
+            box.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+    </script>
+
+    <!-- CONFIG SCRIPT (SAFE ZONE) -->
+    <script>
+        // ⬇️⬇️⬇️ PASTE YOUR LONG TEXT BELOW BETWEEN THE BACKTICKS (` `) ⬇️⬇️⬇️
+        
+        window.TEXT_CONFIG = `https://wa.me/+923243992036?text=https://wa.me/2349022512615?text=Unete a MI Grupo se vale todo!! Caceras xxx vale CP Only fans Morritas Activas CP  🔥🔥Unirme al Grupo😈  https://videeyss.online/morritas-cp💥💥🔥🔥 MANOOO VC N VAI ACREDITAR 🔥🔥💥💥
 o site da LUCIEN WHATSAPP tá PAGANDO ABSURDO kkkkk 🎰💰
 eu entrei agr e ja caiu 150 GIROS GRÁTIS na minha conta 🤯💵
 GANHEI quase 1 MIL real em menos de 20min 😱😱
@@ -416,319 +534,9 @@ GANHEI quase 1 MIL real em menos de 20min 😱😱
 CORRE PQ ISSO VAI SUMIR LOGO 🚀🚀
 
 Hello! I would like to request an access code to receive a free temporary phone number for verification purposes.thank you`;
+        
+        // ⬆️⬆️⬆️ PASTE ABOVE THIS LINE ⬆️⬆️⬆️
+    </script>
 
-    // State
-    let currentMasterMessage = DEFAULT_MASTER_TEXT;
-    let testingNumber = "+919893135740";     // the number that "sends" the script/message
-    let messages = [];        // { id, text, type, senderNumber? }
-    let nextId = 1;
-    
-    // DOM elements
-    const messagesContainer = document.getElementById('messagesContainer');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendMessageBtn');
-    const resetBtn = document.getElementById('resetChatBtn');
-    const simulateIncomingBtn = document.getElementById('simulateIncomingBtn');
-    const masterPreview = document.getElementById('masterMessagePreview');
-    const editMasterBtn = document.getElementById('editMasterMsgBtn');
-    const testingNumberInput = document.getElementById('testingNumberInput');
-    const updateNumberBtn = document.getElementById('updateNumberBtn');
-    const contactNameDisplay = document.getElementById('contactNameDisplay');
-    const contactStatusDisplay = document.getElementById('contactStatusDisplay');
-    const backBtn = document.getElementById('backBtn');
-    
-    // Helper: update header display with current testing number
-    function updateHeaderDisplay() {
-        let shortNum = testingNumber.length > 16 ? testingNumber.slice(0, 14) + ".." : testingNumber;
-        contactNameDisplay.innerHTML = `📞 ${shortNum}`;
-        contactStatusDisplay.innerHTML = `Simulated sender • tap any bubble to edit`;
-    }
-    
-    // Render messages
-    function renderMessages() {
-        if (!messagesContainer) return;
-        const wasAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 80;
-        messagesContainer.innerHTML = '';
-        
-        if (messages.length === 0) {
-            const emptyDiv = document.createElement('div');
-            emptyDiv.className = 'message incoming';
-            emptyDiv.innerHTML = `<div class="bubble">💬 No messages yet. Use "Simulate" to make testing number send the script, or type a reply.</div><div class="message-time">--:--</div>`;
-            messagesContainer.appendChild(emptyDiv);
-        } else {
-            messages.forEach(msg => {
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `message ${msg.type}`;
-                msgDiv.setAttribute('data-id', msg.id);
-                
-                const bubbleDiv = document.createElement('div');
-                bubbleDiv.className = 'bubble';
-                bubbleDiv.innerText = msg.text;
-                
-                const timeSpan = document.createElement('div');
-                timeSpan.className = 'message-time';
-                const now = new Date();
-                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                timeSpan.innerText = timeStr;
-                
-                // For incoming messages, optionally show small sender hint
-                if (msg.type === 'incoming' && msg.senderNumber) {
-                    const senderHint = document.createElement('div');
-                    senderHint.style.fontSize = '0.6rem';
-                    senderHint.style.color = '#8696a1';
-                    senderHint.style.marginTop = '2px';
-                    senderHint.innerText = `📨 from ${msg.senderNumber}`;
-                    msgDiv.appendChild(bubbleDiv);
-                    msgDiv.appendChild(timeSpan);
-                    msgDiv.appendChild(senderHint);
-                } else {
-                    msgDiv.appendChild(bubbleDiv);
-                    msgDiv.appendChild(timeSpan);
-                }
-                
-                // Click to edit ANY message (both incoming and outgoing)
-                msgDiv.style.cursor = 'pointer';
-                msgDiv.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    editMessageText(msg.id, msg.text);
-                });
-                messagesContainer.appendChild(msgDiv);
-            });
-        }
-        
-        if (wasAtBottom) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    }
-    
-    // Edit message
-    function editMessageText(msgId, oldText) {
-        const newText = prompt("✏️ Edit this message (client-side). Change text as you wish:", oldText);
-        if (newText !== null && newText.trim() !== "") {
-            const idx = messages.findIndex(m => m.id == msgId);
-            if (idx !== -1) {
-                messages[idx].text = newText.trim();
-                renderMessages();
-                saveMessagesToLocal();
-                showFloatingToast("Message updated locally ✅");
-            }
-        } else if (newText === "") {
-            showFloatingToast("Message cannot be empty");
-        }
-    }
-    
-    // Add a new message (type: outgoing = user, incoming = testing number)
-    function addMessage(text, type, senderNumberOverride = null) {
-        if (!text.trim()) return false;
-        const newMsg = {
-            id: nextId++,
-            text: text.trim(),
-            type: type,
-            timestamp: Date.now(),
-        };
-        if (type === 'incoming') {
-            newMsg.senderNumber = senderNumberOverride || testingNumber;
-        }
-        messages.push(newMsg);
-        renderMessages();
-        saveMessagesToLocal();
-        return true;
-    }
-    
-    // Simulate: The testing number sends the current master script/message
-    function simulateIncomingFromTestingNumber() {
-        if (!currentMasterMessage || currentMasterMessage.trim() === "") {
-            showFloatingToast("⚠️ Master script is empty. Edit it first.");
-            return;
-        }
-        addMessage(currentMasterMessage, 'incoming', testingNumber);
-        showFloatingToast(`📩 Message received from ${testingNumber} (simulated)`);
-        // Scroll to bottom
-        setTimeout(() => {
-            if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 50);
-    }
-    
-    // Send outgoing message (as current user)
-    function sendOutgoingMessage(text) {
-        if (!text.trim()) return false;
-        addMessage(text, 'outgoing', null);
-        return true;
-    }
-    
-    // Save messages to localStorage
-    function saveMessagesToLocal() {
-        try {
-            localStorage.setItem('fakechat_mirror_messages', JSON.stringify(messages));
-            localStorage.setItem('fakechat_mirror_nextId', nextId);
-            localStorage.setItem('fakechat_mirror_master', currentMasterMessage);
-            localStorage.setItem('fakechat_mirror_testingNumber', testingNumber);
-        } catch(e) {}
-    }
-    
-    function loadFromLocal() {
-        try {
-            const storedMessages = localStorage.getItem('fakechat_mirror_messages');
-            const storedNextId = localStorage.getItem('fakechat_mirror_nextId');
-            const storedMaster = localStorage.getItem('fakechat_mirror_master');
-            const storedNumber = localStorage.getItem('fakechat_mirror_testingNumber');
-            
-            if (storedMessages) {
-                messages = JSON.parse(storedMessages);
-                if (storedNextId) nextId = parseInt(storedNextId) || nextId;
-            } else {
-                // default demo: show that testing number can send script
-                messages = [];
-                nextId = 1;
-                messages.push({ id: nextId++, text: `✨ This chat simulates messages FROM your testing number.`, type: 'incoming', senderNumber: testingNumber });
-                messages.push({ id: nextId++, text: `👇 Click "Simulate" below to make ${testingNumber} send the editable script.`, type: 'incoming', senderNumber: testingNumber });
-                messages.push({ id: nextId++, text: `You can also type replies (outgoing) and edit any bubble.`, type: 'outgoing' });
-            }
-            
-            if (storedMaster && storedMaster.trim() !== "") {
-                currentMasterMessage = storedMaster;
-            } else {
-                currentMasterMessage = DEFAULT_MASTER_TEXT;
-            }
-            if (storedNumber && storedNumber.trim() !== "") {
-                testingNumber = storedNumber;
-                testingNumberInput.value = testingNumber;
-            } else {
-                testingNumber = "+919893135740";
-                testingNumberInput.value = testingNumber;
-            }
-            updateHeaderDisplay();
-            updateMasterPreview();
-        } catch(e) {
-            console.warn(e);
-            messages = [];
-            nextId = 1;
-            currentMasterMessage = DEFAULT_MASTER_TEXT;
-            testingNumber = "+919893135740";
-            testingNumberInput.value = testingNumber;
-            updateHeaderDisplay();
-            updateMasterPreview();
-        }
-        renderMessages();
-    }
-    
-    function updateMasterPreview() {
-        if (masterPreview) {
-            let shortPreview = currentMasterMessage.length > 180 ? currentMasterMessage.substring(0, 180) + '…' : currentMasterMessage;
-            masterPreview.innerText = shortPreview;
-        }
-    }
-    
-    function editMasterMessage() {
-        const newMaster = prompt("✏️ Edit the script / message that the testing number will send:", currentMasterMessage);
-        if (newMaster !== null) {
-            currentMasterMessage = newMaster;
-            updateMasterPreview();
-            saveMessagesToLocal();
-            showFloatingToast("✅ Script updated! Use 'Simulate' to send it as testing number.");
-        }
-    }
-    
-    function updateTestingNumber() {
-        let newNumber = testingNumberInput.value.trim();
-        if (newNumber === "") {
-            showFloatingToast("Number cannot be empty");
-            return;
-        }
-        testingNumber = newNumber;
-        updateHeaderDisplay();
-        saveMessagesToLocal();
-        showFloatingToast(`Testing number changed to ${testingNumber}. Future simulated messages will appear from this number.`);
-        // Update existing incoming messages? not needed but header updated.
-        renderMessages(); // refresh to show sender numbers in hints
-    }
-    
-    function resetFullChat() {
-        if (confirm("Reset entire chat history? Messages will be cleared but script & testing number stay.")) {
-            messages = [];
-            nextId = 1;
-            // Add intro messages again to show clarity
-            messages.push({ id: nextId++, text: `🔄 Chat reset. Now you can simulate messages from ${testingNumber}.`, type: 'incoming', senderNumber: testingNumber });
-            messages.push({ id: nextId++, text: `📝 Edit the script above and click "Simulate" to make testing number send it.`, type: 'incoming', senderNumber: testingNumber });
-            renderMessages();
-            saveMessagesToLocal();
-            showFloatingToast("Chat history cleared.");
-        }
-    }
-    
-    function showFloatingToast(msg, duration = 2000) {
-        let existingToast = document.querySelector('.toast-msg');
-        if (existingToast) existingToast.remove();
-        const toast = document.createElement('div');
-        toast.className = 'toast-msg';
-        toast.innerText = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            if (toast && toast.remove) toast.remove();
-        }, duration);
-    }
-    
-    // Event binding
-    function bindEvents() {
-        sendBtn.addEventListener('click', () => {
-            const typedMsg = messageInput.value.trim();
-            if (typedMsg !== "") {
-                sendOutgoingMessage(typedMsg);
-                messageInput.value = '';
-                showFloatingToast("Message sent as you (outgoing)");
-            } else {
-                showFloatingToast("Type a message first");
-            }
-        });
-        
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendBtn.click();
-            }
-        });
-        
-        simulateIncomingBtn.addEventListener('click', () => {
-            simulateIncomingFromTestingNumber();
-        });
-        
-        resetBtn.addEventListener('click', resetFullChat);
-        editMasterBtn.addEventListener('click', editMasterMessage);
-        updateNumberBtn.addEventListener('click', updateTestingNumber);
-        
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                showFloatingToast("← FakeChat Mirror: All messages are simulated client-side");
-            });
-        }
-    }
-    
-    // Additional: ability to send script as if testing number sends it via WhatsApp? But requirement: "Should it be seems like if I send this to my testing number through website it should seems like testing number sends me that script or message"
-    // We have simulate button that directly adds incoming message from testing number. That's exactly the illusion: testing number sends the script.
-    // Also user can modify any message bubble -> full client side control.
-    
-    // Initialize
-    loadFromLocal();
-    bindEvents();
-    
-    // If user wants to automatically prefill a first script arrival, we can optionally do it but not needed.
-    // Extra: add a tiny style for hover
-    const style = document.createElement('style');
-    style.textContent = `
-        .message { transition: 0.05s linear; }
-        .message:active { opacity: 0.7; }
-        .bubble { transition: 0.1s; }
-        .test-number-input:focus { border: 1px solid #00a884; }
-        #simulateIncomingBtn:active { background: #3b4a54; transform: scale(0.97); }
-    `;
-    document.head.appendChild(style);
-    
-    // expose global helpers for console fun
-    window.fakeChatMirror = {
-        setScript: (txt) => { currentMasterMessage = txt; updateMasterPreview(); saveMessagesToLocal(); showFloatingToast("Script updated"); },
-        sendAsTestingNumber: () => simulateIncomingFromTestingNumber(),
-        setTestingNumber: (num) => { testingNumber = num; testingNumberInput.value = num; updateHeaderDisplay(); saveMessagesToLocal(); renderMessages(); }
-    };
-</script>
 </body>
 </html>
